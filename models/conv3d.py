@@ -2,9 +2,10 @@ import torch
 import torch.nn as nn
 
 class Conv3DAE(nn.Module):
-    def __init__(self, input_channels=3, base_size=32):
+    def __init__(self, input_channels=3, base_size=32, extract_feature=False):
         super().__init__()
         self.input_channels = input_channels
+        self.extract_feature = extract_feature
 
         # Input shape (n, 3, 16, 224, 224)
         self.encoder = nn.Sequential(
@@ -25,7 +26,8 @@ class Conv3DAE(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
-        x = self.decoder(x)
+        if not self.extract_feature:
+            x = self.decoder(x)
         return x
 
 class Conv3DBlock(nn.Module):
