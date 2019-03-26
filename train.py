@@ -62,6 +62,7 @@ def main():
 
     for epoch in range(start_epoch, max_epoch):
         train(trainloader, model, optimizer, criterion, None, epoch)
+        save_model(model, optimizer, epoch, '{}_epoch{}'.format(checkpoint_prefix, epoch + 1))
     visualize(testloader, model)
 
 def train(loader, model, optimizer, criterion, writer, epoch):
@@ -105,6 +106,44 @@ def train(loader, model, optimizer, criterion, writer, epoch):
                 epoch + 1, i + 1, total_iter, 
                 batch_time=batch_time, data_time=data_time, loss=losses)
             )
+
+        if i % 100 == 0:
+            save_model(model, optimizer, epoch, 'conv3dae_mse')
+
+@torch.no_grad()
+def evaluate_plot(loader, model, criterion):
+    model.eval()
+
+    losses = []
+    for i, (inputs, targets) in enumerate(loader):
+        inputs = inputs.to(device)
+        outs = model(inputs)
+        loss = criterion(outs, inputs)
+        losses.append(loss.item())
+
+    losses = np.array(losses)
+    losses = losses - np.min(losses)
+    losses = 1 - losses / np.max(losses)
+
+    plt.plot(np.arange(len(losses)), losses)
+    plt.show()
+
+@torch.no_grad()
+def output_reconstruction(loader, model):
+    model.eval()
+
+    transforms = torchvision.transforms.ToPILImage()
+
+    num = 1
+    for i, (inputs, targets) in enumerate(loader):
+        inputs = inputs.to(device)
+        outs = model(inputs)
+        outs = outs.permute(0, 2, 1, 3, 4).contiguous().view(-1, 3, 224, 224).cpu()
+
+        for j in range(outs.shape[0]):
+            img = transforms(outs[j])
+            img.save('results/{:06d}.png'.format(num))
+            num += 1
 
 @torch.no_grad()
 def visualize(loader, model):
